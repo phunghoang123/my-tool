@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>HUSI_Scoreboard_TKD_V5</title>
+    <style>
+        :root {
+            --blue-main: #0055ff; --red-main: #ff1100; --gold: #ffcc00;
+            --bg-dark: #000; --panel-bg: #1a1a1a; --vn-red: #da251d;
+            --highlight-yellow: #ffff00;
+        }
+        body { background: var(--bg-dark); color: #fff; font-family: "Segoe UI", sans-serif; margin: 0; text-align: center; overflow-y: auto; }
+        #display-area { height: 95vh; display: flex; background: #000; position: relative; gap: 0; padding: 0; box-sizing: border-box; }
+        .top-bar { position: absolute; top: 0; left: 0; width: 100%; height: 100px; display: flex; z-index: 20; }
+        
+        /* FIX: Căn giữa tuyệt đối để chữ không bị lệch khi co lại */
+        .name-wrapper { flex: 1; height: 100%; display: flex; align-items: center; position: relative; overflow: hidden; }
+        .name-container { width: 100%; display: flex; align-items: center; justify-content: center; padding: 0 115px; box-sizing: border-box; overflow: hidden; }
+        
+        /* FIX: Ép thẻ span hiển thị dạng khối để nhận diện width chính xác */
+        .name-wrapper span { 
+            font-size: 55px; font-weight: 900; text-transform: uppercase; 
+            white-space: nowrap; text-shadow: 3px 3px 6px rgba(0,0,0,0.6); 
+            display: block; width: 100%; text-align: center;
+        }
+        
+        .blue-side-name { background: linear-gradient(to right, #0033aa, var(--blue-main)); }
+        .red-side-name { background: linear-gradient(to left, #aa0000, var(--red-main)); }
+        .flag-vn { width: 100px; height: 60px; background-color: var(--vn-red); border: 2px solid #fff; border-radius: 5px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; position: absolute; top: 20px; }
+        .blue-side-name .flag-vn { left: 10px; }
+        .red-side-name .flag-vn { right: 10px; }
+        .flag-vn::before { content: "★"; color: #ffff00; font-size: 45px; line-height: 1; margin-top: -3px; }
+
+        .side { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; }
+        .blue { background-color: var(--blue-main); }
+        .red { background-color: var(--red-main); }
+        .score-big { font-size: 27vw; font-weight: 900; line-height: 0.7; margin-top: -20px; z-index: 5; }
+        .win-tracker { position: absolute; top: 110px; display: flex; gap: 10px; z-index: 10; }
+        #tracker-blue { right: 20px; }
+        #tracker-red { left: 20px; }
+        .win-dot { width: 35px; height: 35px; border-radius: 50%; border: 3px solid #fff; background: rgba(255,255,255,0.1); }
+        .win-dot.active { background: var(--gold); border-color: var(--gold); box-shadow: 0 0 15px var(--gold); }
+        
+        .bottom-stats { position: absolute; bottom: 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .gj-big { font-size: 37px; color: var(--gold); border: 3px solid var(--gold); padding: 5px 20px; border-radius: 10px; background: rgba(0,0,0,0.8); font-weight: 900; }
+        .stats-row { display: flex; gap: 8px; }
+        .stat-item { background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px; border-bottom: 3px solid var(--gold); min-width: 70px; }
+        .stat-label { font-size: 10px; display: block; color: var(--gold); font-weight: bold; }
+        .stat-val { font-size: 20px; font-weight: 900; }
+        
+        .center-column { width: 380px; display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 80px; align-items: center; background: #000; z-index: 10; }
+        .time-txt { font-size: 110px; font-family: monospace; font-weight: 900; padding: 10px; border: 5px solid #fff; width: 95%; margin: 5px 0; transition: all 0.1s; }
+        .t-run { color: #fff; background: transparent; border-color: #fff; } 
+        .t-stop, .t-break { color: #000; background-color: var(--highlight-yellow); border-color: var(--highlight-yellow); }
+        
+        .match-display { color: #fff; font-size: 50px; font-weight: 900; margin-top: 40px; display: flex; flex-direction: column; }
+        #vMT { font-size: 130px; line-height: 1.1; color: var(--gold); text-shadow: 0 0 20px rgba(255, 204, 0, 0.5); }
+        .round-box { font-size: 60px; font-weight: 900; color: #fff; margin-bottom: 10px; min-height: 70px; }
+        
+        #control-area { min-height: 35vh; background: var(--panel-bg); display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; padding: 20px; border-top: 5px solid #444; }
+        .col { display: flex; flex-direction: column; gap: 8px; justify-content: center; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; }
+        .row { display: flex; gap: 5px; justify-content: center; align-items: center; flex-wrap: wrap; }
+        input { background: #000; color: #fff; border: 1px solid #555; text-align: center; font-size: 18px; padding: 8px; border-radius: 5px; }
+        button { cursor: pointer; border: none; border-radius: 8px; font-weight: bold; color: #fff; text-transform: uppercase; transition: 0.1s; }
+        .btn-m { background: #28a745; font-size: 35px; height: 100px; width: 100%; border: 4px solid #fff; }
+        .btn-b { background: var(--blue-main); flex: 1; padding: 12px 0; }
+        .btn-r { background: var(--red-main); flex: 1; padding: 12px 0; }
+        .btn-s { background: #444; flex: 1; font-size: 13px; padding: 10px 0; }
+        .btn-st { background: #333; font-size: 11px; padding: 5px; border: 1px solid #666; flex: 1; }
+        #match-list-footer { grid-column: span 3; background: #111; padding: 15px; border-radius: 10px; border: 1px solid #444; }
+        #matchListData { width: 100%; height: 80px; background: #000; color: #0f0; border: 1px solid #555; padding: 8px; font-family: monospace; resize: none; }
+        #settings-modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #222; border: 2px solid var(--gold); padding: 20px; z-index: 100; border-radius: 15px; }
+        .setting-row { margin: 10px 0; display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+    </style>
+</head>
+<body>
+
+<div id="settings-modal">
+    <div style="font-size: 20px; color: var(--gold); margin-bottom: 15px; font-weight: bold;">CÀI ĐẶT TRẬN ĐẤU</div>
+    <div class="setting-row">Thời gian hiệp: <div class="row"><input type="number" id="min" value="2" style="width:50px"> : <input type="number" id="sec" value="0" style="width:50px"></div></div>
+    <div class="setting-row">Thời gian nghỉ (s): <input type="number" id="iBreakSet" value="60" style="width:110px"></div>
+    <div class="setting-row">Số trận (Match): <input type="number" id="iMT" value="1" style="width:110px" oninput="up()"></div>
+    <div class="setting-row">Hiệp hiện tại: <input type="number" id="iRD" value="1" style="width:110px" oninput="up()"></div>
+    <div class="setting-row">Luật cách biệt 12đ: <input type="checkbox" id="pointGapActive" checked style="width:25px; height:25px;"></div>
+    <button onclick="closeSettings()" style="background:var(--gold); color:#000; width:100%; padding:10px; margin-top:10px">LƯU & ĐÓNG</button>
+</div>
+
+<div id="display-area">
+    <div class="top-bar">
+        <div class="name-wrapper blue-side-name"><div class="flag-vn"></div><div class="name-container"><span id="vNB">VÕ SĨ XANH</span></div></div>
+        <div class="name-wrapper red-side-name"><div class="name-container"><span id="vNR">VÕ SĨ ĐỎ</span></div><div class="flag-vn"></div></div>
+    </div>
+    <div class="side blue">
+        <div class="win-tracker" id="tracker-blue"><div id="bw1" class="win-dot"></div><div id="bw2" class="win-dot"></div></div>
+        <div class="score-big" id="vSB">0</div>
+        <div class="bottom-stats"><div class="gj-big" id="vGB">GAM-JEOM: 0</div><div class="stats-row"><div class="stat-item"><span class="stat-label">TECH</span><span class="stat-val" id="vBT">0</span></div><div class="stat-item"><span class="stat-label">HEAD</span><span class="stat-val" id="vBH">0</span></div><div class="stat-item"><span class="stat-label">ARMOR</span><span class="stat-val" id="vBA">0</span></div><div class="stat-item"><span class="stat-label">PUNCH</span><span class="stat-val" id="vBP">0</span></div></div></div>
+    </div>
+    <div class="center-column">
+        <div class="round-box" id="vRD">ROUND 1</div>
+        <div id="vTD" class="time-txt t-stop">02:00</div>
+        <div class="match-display"><span>MATCH</span><span id="vMT">1</span></div>
+    </div>
+    <div class="side red">
+        <div class="win-tracker" id="tracker-red"><div id="rw1" class="win-dot"></div><div id="rw2" class="win-dot"></div></div>
+        <div class="score-big" id="vSR">0</div>
+        <div class="bottom-stats"><div class="gj-big" id="vGR">GAM-JEOM: 0</div><div class="stats-row"><div class="stat-item"><span class="stat-label">TECH</span><span class="stat-val" id="vRT">0</span></div><div class="stat-item"><span class="stat-label">HEAD</span><span class="stat-val" id="vRH">0</span></div><div class="stat-item"><span class="stat-label">ARMOR</span><span class="stat-val" id="vRA">0</span></div><div class="stat-item"><span class="stat-label">PUNCH</span><span class="stat-val" id="vRP">0</span></div></div></div>
+    </div>
+</div>
+
+<div id="control-area">
+    <div class="col">
+        <input type="text" id="iB" value="VÕ SĨ XANH" oninput="up()">
+        <div class="row"><button class="btn-b" onclick="ch('sb',1)">+1</button><button class="btn-b" onclick="ch('sb',2)">+2</button><button class="btn-b" onclick="ch('sb',3)">+3</button></div>
+        <div class="row">
+            <div style="display:flex; flex-direction:column; gap:2px; flex:1"><button class="btn-st" onclick="st('bt',1)">TECH +</button><button class="btn-st" style="background:#222" onclick="st('bt',-1)">-</button></div>
+            <div style="display:flex; flex-direction:column; gap:2px; flex:1"><button class="btn-st" onclick="st('bh',1)">HEAD +</button><button class="btn-st" style="background:#222" onclick="st('bh',-1)">-</button></div>
+            <div style="display:flex; flex-direction:column; gap:2px; flex:1"><button class="btn-st" onclick="st('ba',1)">ARMOR +</button><button class="btn-st" style="background:#222" onclick="st('ba',-1)">-</button></div>
+            <div style="display:flex; flex-direction:column; gap:2px; flex:1"><button class="btn-st" onclick="st('bp',1)">PUNCH +</button><button class="btn-st" style="background:#222" onclick="st('bp',-1)">-</button></div>
+        </div>
+        <div class="row"><button class="btn-s" style="background:#664400; flex:3" onclick="l('b')">LỖI XANH [G]</button><button class="btn-s" style="background:#332200; flex:1" onclick="ul('b')">-G</button></div>
+        <div class="row"><button class="btn-s" style="background:#222" onclick="win('b',-1)">WIN -</button><button class="btn-s" style="background:#222" onclick="win('b',1)">WIN +</button></div>
+    </div>
+    <div class="col">
+        <button id="pk" class="btn-m" onclick="runT()">BẮT ĐẦU [Space]</button>
+        <div class="row"><button class="btn-s" onclick="openSettings()" style="background:#555">⚙️ CÀI ĐẶT</button><button class="btn-s" onclick="mo()" style="background:#6200ea">MỞ DISPLAY</button><button class="btn-s" onclick="resetCurrentMatch()" style="background:#d32f2f">RESET TRẬN [Esc]</button></div>
+        <button onclick="loadNextMatch()" style="background: #ffcc00; color: #000; padding: 15px 0; font-size: 18px; width: 100%; border-radius: 8px;">⚡ NẠP TRẬN TIẾP THEO</button>
+    </div>
+    <div class="col">
+        <input type="text" id="iR" value="VÕ SĨ ĐỎ" oninput="up()">
+        <div class="row"><button class="btn-r" onclick="ch('sr',1)">+1</button><button class="btn-r" onclick="ch('sr',2)">+2</button><button class="btn-r" onclick="ch('sr',3)">+3</button></div>
+        <div class="row">
+            <div style="display:flex; flex-direction:column; gap:2px; flex:1"><button class="btn-st" onclick="st('rt',1)">TECH +</button><button class="btn-st" style="background:#222" onclick="st('rt',-1)">-</button></div>
+            <div style="display:flex; flex-direction:column; gap:2px; flex:1"><button class="btn-st" onclick="st('rh',1)">HEAD +</button><button class="btn-st" style="background:#222" onclick="st('rh',-1)">-</button></div>
+            <div style="display:flex; flex-direction:column; gap:2px; flex:1"><button class="btn-st" onclick="st('ra',1)">ARMOR +</button><button class="btn-st" style="background:#222" onclick="st('ra',-1)">-</button></div>
+            <div style="display:flex; flex-direction:column; gap:2px; flex:1"><button class="btn-st" onclick="st('rp',1)">PUNCH +</button><button class="btn-st" style="background:#222" onclick="st('rp',-1)">-</button></div>
+        </div>
+        <div class="row"><button class="btn-s" style="background:#664400; flex:3" onclick="l('r')">LỖI ĐỎ [H]</button><button class="btn-s" style="background:#332200; flex:1" onclick="ul('r')">-G</button></div>
+        <div class="row"><button class="btn-s" style="background:#222" onclick="win('r',-1)">WIN -</button><button class="btn-s" style="background:#222" onclick="win('r',1)">WIN +</button></div>
+    </div>
+    <div id="match-list-footer"><textarea id="matchListData" placeholder="1 | Võ Sĩ A | Võ Sĩ B"></textarea></div>
+</div>
+
+<script>
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playSound(t) {
+        if (audioCtx.state==='suspended') audioCtx.resume();
+        const o=audioCtx.createOscillator(), g=audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination);
+        if(t==='beep'){o.type='sine'; o.frequency.setValueAtTime(880,audioCtx.currentTime); g.gain.setValueAtTime(0.1,audioCtx.currentTime); o.start(); o.stop(audioCtx.currentTime+0.1);}
+        else if(t==='buzzer'){o.type='sawtooth'; o.frequency.setValueAtTime(150,audioCtx.currentTime); g.gain.setValueAtTime(0.3,audioCtx.currentTime); o.start(); o.stop(audioCtx.currentTime+2);}
+    }
+
+    var sb=0, sr=0, gb=0, gr=0, wb=0, wr=0, running=false, isBreak=false, tm, vW;
+    var bt=0, bh=0, ba=0, bp=0, rt=0, rh=0, ra=0, rp=0;
+    
+    function getSetTime() { return (parseInt(document.getElementById('min').value)||0)*60 + (parseInt(document.getElementById('sec').value)||0); }
+    var time = getSetTime();
+
+    function openSettings() { document.getElementById('settings-modal').style.display='block'; }
+    function closeSettings() { document.getElementById('settings-modal').style.display='none'; if(!running&&!isBreak) time=getSetTime(); up(); }
+
+    /* FIX: Hàm thu nhỏ chữ hoạt động bằng cách đo scrollWidth thực tế so với khung chứa */
+    function autoShrinkText(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const container = el.parentElement;
+        let fontSize = 55; 
+        el.style.fontSize = fontSize + "px";
+        
+        while (el.scrollWidth > container.clientWidth && fontSize > 10) {
+            fontSize -= 2;
+            el.style.fontSize = fontSize + "px";
+        }
+    }
+
+    function up() {
+        const uv=(id,v)=>{document.querySelectorAll('#'+id).forEach(e=>e.innerText=v);};
+        uv('vSB',sb); uv('vSR',sr); uv('vGB',"GAM-JEOM: "+gb); uv('vGR',"GAM-JEOM: "+gr);
+        uv('vBT',bt); uv('vBH',bh); uv('vBA',ba); uv('vBP',bp);
+        uv('vRT',rt); uv('vRH',rh); uv('vRA',ra); uv('vRP',rp);
+        
+        // Cập nhật tên và ép co chữ ngay lập tức
+        const nameB = document.getElementById('iB').value;
+        const nameR = document.getElementById('iR').value;
+        document.querySelectorAll('#vNB').forEach(e => { e.innerText = nameB; autoShrinkText(e.id); });
+        document.querySelectorAll('#vNR').forEach(e => { e.innerText = nameR; autoShrinkText(e.id); });
+
+        uv('vMT',document.getElementById('iMT').value||1);
+        document.querySelectorAll('#vRD').forEach(e=>e.innerText=isBreak?"BREAK TIME":"ROUND "+(document.getElementById('iRD').value||1));
+        
+        document.querySelectorAll('#bw1').forEach(e=>e.className=wb>=1?"win-dot active":"win-dot");
+        document.querySelectorAll('#bw2').forEach(e=>e.className=wb>=2?"win-dot active":"win-dot");
+        document.querySelectorAll('#rw1').forEach(e=>e.className=wr>=1?"win-dot active":"win-dot");
+        document.querySelectorAll('#rw2').forEach(e=>e.className=wr>=2?"win-dot active":"win-dot");
+        
+        let m=Math.floor(time/60), s=time%60;
+        let str=(m<10?"0":"")+m+":"+(s<10?"0":"")+s;
+        document.querySelectorAll('#vTD').forEach(e=>{e.innerText=str; e.className="time-txt "+(isBreak?"t-break":(!running?"t-stop":"t-run"));});
+        
+        if(vW && !vW.closed){
+            vW.document.body.innerHTML = document.getElementById('display-area').outerHTML;
+            vW.document.querySelectorAll('#vNB, #vNR').forEach(e => {
+                let f=55; e.style.fontSize=f+"px";
+                while(e.scrollWidth > e.parentElement.clientWidth && f > 10){ f-=2; e.style.fontSize=f+"px"; }
+            });
+        }
+
+        if(!isBreak && running) {
+            if(document.getElementById('pointGapActive').checked && Math.abs(sb-sr)>=12) stopAndBuzzer("CÁCH BIỆT 12 ĐIỂM!");
+            if(gb>=5 || gr>=5) stopAndBuzzer(gb>=5?"XANH 5 LỖI!":"ĐỎ 5 LỖI!");
+        }
+    }
+
+    function stopAndBuzzer(msg){ forceStop(); playSound('buzzer'); setTimeout(()=>{alert(msg); startBreak();},50); }
+
+    function resetCurrentMatch() {
+        sb=0;sr=0;gb=0;gr=0;bt=0;bh=0;ba=0;bp=0;rt=0;rh=0;ra=0;rp=0;wb=0;wr=0;
+        document.getElementById('iRD').value=1; isBreak=false; running=false; clearInterval(tm);
+        time=getSetTime(); document.getElementById('pk').innerText="BẮT ĐẦU [Space]"; up();
+    }
+
+    function loadNextMatch() {
+        const tx=document.getElementById('matchListData'); const lines=tx.value.trim().split('\n');
+        if(!lines[0]) return; const part=lines[0].split('|');
+        if(part.length>=3){
+            document.getElementById('iMT').value=part[0].trim();
+            document.getElementById('iB').value=part[1].trim();
+            document.getElementById('iR').value=part[2].trim();
+            lines.shift(); tx.value=lines.join('\n'); resetCurrentMatch();
+        }
+    }
+
+    function startBreak(){
+        let winner = "";
+        if(sb > sr || gr >= 5) winner = "blue";
+        else if(sr > sb || gb >= 5) winner = "red";
+        else {
+            if(bt > rt) winner = "blue";
+            else if(rt > bt) winner = "red";
+            else if(bh > rh) winner = "blue";
+            else if(rh > bh) winner = "red";
+            else {
+                let choice = confirm("HÒA CHỈ SỐ! NHẤN 'OK' CHO XANH THẮNG, 'CANCEL' CHO ĐỎ THẮNG");
+                winner = choice ? "blue" : "red";
+            }
+        }
+        if(winner === "blue") { wb++; alert("XANH THẮNG HIỆP!"); }
+        else { wr++; alert("ĐỎ THẮNG HIỆP!"); }
+        up();
+        if(wb >= 2 || wr >= 2) { alert("KẾT THÚC TRẬN!"); setTimeout(loadNextMatch, 500); return; }
+        isBreak = true; time = parseInt(document.getElementById('iBreakSet').value)||60; runT();
+    }
+
+    function forceStop() { clearInterval(tm); running=false; document.getElementById('pk').innerText="TIẾP TỤC"; }
+
+    function runT(){ 
+        if(running) forceStop(); 
+        else { 
+            running=true; document.getElementById('pk').innerText="DỪNG";
+            tm=setInterval(()=>{ 
+                if(time>0){ time--; up(); } 
+                else { 
+                    forceStop(); playSound('buzzer'); 
+                    if(!isBreak) setTimeout(startBreak, 100); 
+                    else { isBreak=false; sb=0;sr=0;gb=0;gr=0;bt=0;bh=0;ba=0;bp=0;rt=0;rh=0;ra=0;rp=0; document.getElementById('iRD').value++; time=getSetTime(); up(); }
+                }
+            }, 1000); 
+        } 
+        up(); 
+    }
+
+    function ch(v,p){ if(isBreak)return; playSound('beep'); if(v=='sb')sb+=p; else sr+=p; up(); }
+    function st(type,val){
+        if(isBreak)return; playSound('beep');
+        if(type==='bt'){bt=Math.max(0,bt+val); sb=Math.max(0,sb+(val*2));}
+        else if(type==='rt'){rt=Math.max(0,rt+val); sr=Math.max(0,sr+(val*2));}
+        else if(type==='bh'){bh=Math.max(0,bh+val); sb=Math.max(0,sb+(val*3));}
+        else if(type==='rh'){rh=Math.max(0,rh+val); sr=Math.max(0,sr+(val*3));}
+        else if(type==='ba'){ba=Math.max(0,ba+val); sb=Math.max(0,sb+(val*2));}
+        else if(type==='ra'){ra=Math.max(0,ra+val); sr=Math.max(0,sr+(val*2));}
+        else if(type==='bp'){bp=Math.max(0,bp+val); sb=Math.max(0,sb+val);}
+        else if(type==='rp'){rp=Math.max(0,rp+val); sr=Math.max(0,sr+val);}
+        up();
+    }
+    function l(s){ if(isBreak)return; playSound('beep'); if(s=='b'){gb++; sr++;} else {gr++; sb++;} up(); }
+    function ul(s){ if(isBreak)return; playSound('beep'); if(s=='b'&&gb>0){gb--; sr--;} else if(s=='r'&&gr>0){gr--; sb--;} up(); }
+    function win(s,v){ if(s=='b')wb=Math.max(0,wb+v); else wr=Math.max(0,wr+v); up(); }
+
+    function mo(){
+        vW=window.open("","_blank","width=1200,height=800");
+        vW.document.write('<html><head><style>'+document.getElementsByTagName('style')[0].innerHTML+' #control-area, #settings-modal{display:none}</style></head><body>'+document.getElementById('display-area').outerHTML+'<script>window.onload=function(){document.querySelectorAll("#vNB, #vNR").forEach(e=>{let f=55; e.style.fontSize=f+"px"; while(e.scrollWidth>e.parentElement.clientWidth && f>10){f-=2; e.style.fontSize=f+"px";}})}<\/script></body></html>');
+    }
+    window.addEventListener('keydown', function(e){ if(e.code==='Space'){e.preventDefault(); runT();} if(e.code==='Escape'){if(confirm('Reset trận này?')) resetCurrentMatch();} });
+    up();
+</script>
+</body>
+</html>
