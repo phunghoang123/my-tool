@@ -10,7 +10,18 @@
             --highlight-yellow: #ffff00;
         }
         body { background: var(--bg-dark); color: #fff; font-family: "Segoe UI", sans-serif; margin: 0; text-align: center; overflow-y: auto; }
-        #display-area { height: 95vh; display: flex; background: #000; position: relative; gap: 0; padding: 0; box-sizing: border-box; }
+        #display-area {
+    height: 95vh;
+    display: flex;
+    background: #000;
+    position: relative;
+    gap: 0;
+    padding: 0;
+    box-sizing: border-box;
+    /* THÊM DÒNG DƯỚI ĐÂY */
+    border: 10px solid #333; /* Viền ngoài cùng màu xám tối */
+    outline: 3px solid var(--gold); /* Thêm một lớp viền vàng mỏng bên trong */
+}
         .judge-vertical { position: absolute; top: 180px; display: flex; flex-direction: column; gap: 10px; z-index: 100; }
         #lights-blue { left: 15px; }
         #lights-red { right: 15px; }
